@@ -12,3 +12,20 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Product {
+  id    String  @id @default(cuid())
+  code  Int     @unique @default(autoincrement())
+  name  String
+  price Decimal @db.Decimal(18, 8)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  createdById String  @map("created_by_id")
+  updatedById String? @map("updated_by_id")
+  deletedById String? @map("deleted_by_id")
+
+  @@map("product")
+}
