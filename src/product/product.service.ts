@@ -22,6 +22,12 @@ export class ProductService extends PrismaClient implements OnModuleInit {
   }
 
   async create(createProductDto: CreateProductDto, user: User) {
+    const price = parseFloat(createProductDto.price);
+
+    if (isNaN(price)) throw new RpcException({ status: HttpStatus.BAD_REQUEST, message: 'Invalid price' });
+
+    if (price <= 0) throw new RpcException({ status: HttpStatus.BAD_REQUEST, message: 'Price must be greater than 0' });
+
     return this.product.create({ data: { ...createProductDto, createdById: user.id } });
   }
 
@@ -70,6 +76,21 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     const product = await this.product.findFirst({ where });
 
     if (!product) throw new RpcException({ status: HttpStatus.NOT_FOUND, message: `Product with id ${id} not found` });
+
+    const [computedProduct] = await this.getUsers([product]);
+
+    return computedProduct;
+  }
+
+  async findOneByCode(code: number, user: User) {
+    const isAdmin = hasRoles(user.roles, [Role.Admin]);
+
+    const where = isAdmin ? { code } : { code, deletedAt: null };
+
+    const product = await this.product.findFirst({ where });
+
+    if (!product)
+      throw new RpcException({ status: HttpStatus.NOT_FOUND, message: `Product with code ${code} not found` });
 
     const [computedProduct] = await this.getUsers([product]);
 

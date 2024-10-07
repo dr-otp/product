@@ -7,5 +7,5 @@ export class CreateProductDto {
 
   @IsPositive()
   @IsDecimal({ decimal_digits: '8' })
-  price: number;
+  price: string;
 }

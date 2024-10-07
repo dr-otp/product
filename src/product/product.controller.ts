@@ -41,6 +41,19 @@ export class ProductController {
     return this.productService.findOne(id, user);
   }
 
+  @MessagePattern('product.find.one.code')
+  findOneByCode(@Payload() payload: { code: number; user: User }) {
+    const { code, user } = payload;
+
+    if (isNaN(code))
+      throw new RpcException({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Invalid product code',
+      });
+
+    return this.productService.findOneByCode(code, user);
+  }
+
   @MessagePattern('product.find.one.summary')
   findOneSummary(@Payload() payload: { id: string; user: User }) {
     const { id, user } = payload;
