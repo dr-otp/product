@@ -11,8 +11,9 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @MessagePattern('product.create')
-  create(@Payload() createProductDto: CreateProductDto) {
-    return this.productService.create(createProductDto);
+  create(@Payload() payload: { createProductDto: CreateProductDto; user: User }) {
+    const { createProductDto, user } = payload;
+    return this.productService.create(createProductDto, user);
   }
 
   @MessagePattern('product.find.all')

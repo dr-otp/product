@@ -1,4 +1,4 @@
-import { IsDecimal, IsNotEmpty, IsPositive, IsUUID, Min } from 'class-validator';
+import { IsDecimal, IsNotEmpty, IsPositive, Min } from 'class-validator';
 
 export class CreateProductDto {
   @IsNotEmpty()
@@ -8,7 +8,4 @@ export class CreateProductDto {
   @IsPositive()
   @IsDecimal({ decimal_digits: '8' })
   price: number;
-
-  @IsUUID()
-  createdById: string;
 }
