@@ -1,5 +1,5 @@
 # Base dependencies layer
-FROM node:21-alpine3.19 as base
+FROM node:21-alpine3.19 AS base
 
 WORKDIR /usr/src/app
 
@@ -11,7 +11,7 @@ RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 
 # Builder - build the application
-FROM node:21-alpine3.19 as build
+FROM node:21-alpine3.19 AS build
 
 WORKDIR /usr/src/app
 
@@ -37,7 +37,7 @@ RUN find ./node_modules -name "*.md" -type f -delete \
   && find ./node_modules -name "tests" -type d -exec rm -rf {} +
 
 # Final image
-FROM node:21-alpine3.19 as prod
+FROM node:21-alpine3.19 AS prod
 
 WORKDIR /usr/src/app
 
@@ -53,4 +53,5 @@ USER node
 
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
+# Ensure Prisma migrations are applied before starting the app
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
