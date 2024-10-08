@@ -76,7 +76,7 @@ export class ProductController {
   @MessagePattern('product.restore')
   restore(@Payload() payload: { id: string; user: User }) {
     const { id, user } = payload;
-    return this.productService.remove(id, user);
+    return this.productService.restore(id, user);
   }
 
   @MessagePattern('product.remove')

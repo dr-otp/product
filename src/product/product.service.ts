@@ -1,12 +1,12 @@
 import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { PrismaClient, Product } from '@prisma/client';
+import { firstValueFrom } from 'rxjs';
 
-import { PaginationDto, Role, User, UserSummary } from 'src/common';
+import { ListResponse, PaginationDto, Role, User, UserSummary } from 'src/common';
 import { NATS_SERVICE } from 'src/config';
 import { hasRoles } from 'src/helpers';
 import { CreateProductDto, UpdateProductDto } from './dto';
-import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class ProductService extends PrismaClient implements OnModuleInit {
@@ -21,7 +21,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     this.logger.log('Connected to the database \\(^.^)/');
   }
 
-  async create(createProductDto: CreateProductDto, user: User) {
+  async create(createProductDto: CreateProductDto, user: User): Promise<Partial<Product>> {
     const price = parseFloat(createProductDto.price);
 
     if (isNaN(price)) throw new RpcException({ status: HttpStatus.BAD_REQUEST, message: 'Invalid price' });
@@ -31,7 +31,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     return this.product.create({ data: { ...createProductDto, createdById: user.id } });
   }
 
-  async findAll(pagination: PaginationDto, user: User) {
+  async findAll(pagination: PaginationDto, user: User): Promise<ListResponse<Product>> {
     const { page, limit } = pagination;
     const isAdmin = hasRoles(user.roles, [Role.Admin]);
 
@@ -46,10 +46,12 @@ export class ProductService extends PrismaClient implements OnModuleInit {
       orderBy: { createdAt: 'desc' },
     });
 
-    return { meta: { total, page, lastPage }, data };
+    const computedData = await this.getUsers(data);
+
+    return { meta: { total, page, lastPage }, data: computedData };
   }
 
-  async findAllSummary(pagination: PaginationDto, user: User) {
+  async findAllSummary(pagination: PaginationDto, user: User): Promise<ListResponse<Product>> {
     const { page, limit } = pagination;
     const isAdmin = hasRoles(user.roles, [Role.Admin]);
 
@@ -65,10 +67,12 @@ export class ProductService extends PrismaClient implements OnModuleInit {
       select: { id: true, name: true, price: true, code: true, createdAt: true },
     });
 
-    return { meta: { total, page, lastPage }, data };
+    const computedData = await this.getUsers(data);
+
+    return { meta: { total, page, lastPage }, data: computedData };
   }
 
-  async findOne(id: string, user: User) {
+  async findOne(id: string, user: User): Promise<Partial<Product>> {
     const isAdmin = hasRoles(user.roles, [Role.Admin]);
 
     const where = isAdmin ? { id } : { id, deletedAt: null };
@@ -82,7 +86,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     return computedProduct;
   }
 
-  async findOneByCode(code: number, user: User) {
+  async findOneByCode(code: number, user: User): Promise<Partial<Product>> {
     const isAdmin = hasRoles(user.roles, [Role.Admin]);
 
     const where = isAdmin ? { code } : { code, deletedAt: null };
@@ -97,7 +101,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     return computedProduct;
   }
 
-  async findOneSummary(id: string, user: User) {
+  async findOneSummary(id: string, user: User): Promise<Partial<Product>> {
     const isAdmin = hasRoles(user.roles, [Role.Admin]);
 
     const where = isAdmin ? { id } : { id, deletedAt: null };
@@ -112,7 +116,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     return product;
   }
 
-  async update(updateProductDto: UpdateProductDto, user: User) {
+  async update(updateProductDto: UpdateProductDto, user: User): Promise<Partial<Product>> {
     const { id, ...rest } = updateProductDto;
 
     await this.findOneSummary(id, user);
@@ -124,7 +128,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     return computedProduct;
   }
 
-  async restore(id: string, user: User) {
+  async restore(id: string, user: User): Promise<Partial<Product>> {
     try {
       const product = await this.findOne(id, user);
 
@@ -133,7 +137,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
 
       const updatedProduct = await this.product.update({
         where: { id },
-        data: { deletedAt: null, updatedById: user.id },
+        data: { deletedAt: null, updatedById: user.id, deletedById: null },
       });
 
       const [computedProduct] = await this.getUsers([updatedProduct]);
@@ -148,7 +152,7 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async remove(id: string, user: User) {
+  async remove(id: string, user: User): Promise<Partial<Product>> {
     try {
       const product = await this.findOne(id, user);
 
