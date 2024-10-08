@@ -10,6 +10,11 @@ import { ProductService } from './product.service';
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
+  @MessagePattern('product.health')
+  healthCheck() {
+    return 'Product service is up and running';
+  }
+
   @MessagePattern('product.create')
   create(@Payload() payload: { createProductDto: CreateProductDto; user: User }) {
     const { createProductDto, user } = payload;
@@ -65,6 +70,19 @@ export class ProductController {
       });
 
     return this.productService.findOneSummary(id, user);
+  }
+
+  @MessagePattern('product.validate')
+  validateProducts(@Payload('ids') ids: string[]) {
+    const invalidIds = ids.filter((id) => !isCuid(id));
+
+    if (invalidIds.length > 0)
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: `Invalid product ids: ${invalidIds.join(', ')}`,
+      });
+
+    return this.productService.validate(ids);
   }
 
   @MessagePattern('product.update')

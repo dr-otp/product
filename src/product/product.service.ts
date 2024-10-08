@@ -72,6 +72,23 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     return { meta: { total, page, lastPage }, data: computedData };
   }
 
+  async validate(ids: string[]): Promise<Partial<Product>[]> {
+    const idsSet = Array.from(new Set(ids));
+
+    const products = await this.product.findMany({
+      where: { id: { in: idsSet } },
+      select: { id: true, name: true, code: true },
+    });
+
+    if (products.length !== ids.length)
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Invalid product IDs',
+      });
+
+    return products;
+  }
+
   async findOne(id: string, user: User): Promise<Partial<Product>> {
     const isAdmin = hasRoles(user.roles, [Role.Admin]);
 
@@ -197,13 +214,11 @@ export class ProductService extends PrismaClient implements OnModuleInit {
     const userMap = new Map(users.map((user) => [user.id, user]));
 
     // Map users to products
-    const data = products.map(({ createdById, updatedById, deletedById, ...rest }) => ({
+    return products.map(({ createdById, updatedById, deletedById, ...rest }) => ({
       ...rest,
       createdBy: createdById ? userMap.get(createdById) : null,
       updatedBy: updatedById ? userMap.get(updatedById) : null,
       deletedBy: deletedById ? userMap.get(deletedById) : null,
     }));
-
-    return data;
   }
 }
